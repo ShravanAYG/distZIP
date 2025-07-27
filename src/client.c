@@ -114,11 +114,13 @@ static void sig_handler(int _)
 	keep_running = 0;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+	if(argc > 1)
+		return 1;
 	signal(SIGINT, sig_handler);
 
-	char *interface = configParse("interface");
+	char *interface = configParse("interface", argv[0]);
 	char *IPAddr = getIPAddr(interface);
 	int sockfdR = listenOnIP(IPAddr, 9999);
 

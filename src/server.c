@@ -15,8 +15,8 @@
 
 int main(int argc, char **argv)
 {
-	char *interface = configParse("interface");
-	char *clientIP = configParse("client");
+	char *interface = configParse("interface", argv[0]);
+	char *clientIP = configParse("client", argv[0]);
 	char *IPAddr = getIPAddr(interface);
 	uuid_t binuuid;
 	char *buf = NULL;

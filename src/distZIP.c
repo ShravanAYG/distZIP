@@ -11,9 +11,25 @@
 #include <uuid/uuid.h>
 #include <yaml.h>
 
-char *configParse(const char *key_to_find)
+char *configParse(const char *key_to_find, char *exc)
 {
 	FILE *fh = fopen("server.yml", "r");
+	if (!fh) {
+		char path[512];
+		strncpy(path, exc, sizeof(path) - 1);
+		path[sizeof(path) - 1] = '\0';
+		char *p = strrchr(path, '/');
+		if (p) {
+			*(p + 1) = '\0';
+			strncat(path, "server.yml", sizeof(path) - strlen(path) - 1);
+			fh = fopen(path, "r");
+		}
+
+		if (!fh) {
+			fprintf(stderr, "Configuration file server.yml not found\n");
+			exit(1);
+		}
+	}
 	yaml_parser_t parser;
 	yaml_token_t token;
 	int key_matched = 0;
