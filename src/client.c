@@ -16,95 +16,8 @@
 
 #define BUF_SIZE 4096
 
-typedef struct {
-	uuid_t uuid;
-	char filename[1024];
-	size_t size;
-	int status;
-	char ip[255], buf[512];
-} table;
-
 table *tb;
 size_t t_cnt = 0, tmax = 32;
-
-void print_table(table t)
-{
-	char uuid_str[37];
-	uuid_unparse(t.uuid, uuid_str);
-	printf("Recived:\n\tFrom: %s\n\tUUID: %s\n\tSize: %ld\n\tFile: %s\n\tStatus: %d\n", t.ip, uuid_str, t.size, t.filename, t.status);
-}
-
-int compress_file(const char *compressor, const char *file, table *t)
-{
-	char cmd[256];
-
-	sprintf(cmd, "%s -n %s", compressor, file);
-
-	FILE *p = popen(cmd, "r");
-	if (!p) {
-		perror("popen");
-		return 1;
-	}
-
-	while (fgets(t->buf, sizeof(t->buf), p))
-		printf("%s", t->buf);
-
-	pclose(p);
-	return 0;
-}
-
-int comperess_and_send(table *t)
-{
-	if (t->status != 1)
-		return 0;
-	print_table(*t);
-	char fout[255];
-	char Ruuid[37];
-	uuid_unparse(t->uuid, Ruuid);
-	sprintf(fout, "%s.gz", Ruuid);
-
-	compress_file("gzip", Ruuid, t);
-
-	FILE *dst = fopen(fout, "rb");
-	struct stat st;
-	stat(fout, &st);
-	char *dstBuf = malloc(st.st_size);
-	fread(dstBuf, 1, st.st_size, dst);
-	fclose(dst);
-	char header[512];
-	size_t header_len = snprintf(header, sizeof(header), "%s.gz %s %ld\n", t->filename, Ruuid, st.st_size);
-	size_t total_len = header_len + st.st_size;
-	char *outBuf = malloc(total_len);
-	memcpy(outBuf, header, header_len);
-	memcpy(outBuf + header_len, dstBuf, st.st_size);
-	int sockfd = connectToClient(t->ip, 9998);
-	write(sockfd, outBuf, total_len);
-	close(sockfd);
-
-	free(dstBuf);
-	free(outBuf);
-	remove(fout);
-	t->status = 2;
-	return 1;
-}
-
-void create_table(table **t_ptr, size_t *t_cnt_ptr, size_t *tmax_ptr, const char *Ruuid, const char *filename, size_t rSize, const char *serverIP)
-{
-	if (*t_cnt_ptr >= *tmax_ptr) {
-		*tmax_ptr *= 2;
-		*t_ptr = realloc(*t_ptr, *tmax_ptr * sizeof(table));
-	}
-	table *t = *t_ptr;
-	size_t i = *t_cnt_ptr;
-	uuid_parse(Ruuid, t[i].uuid);
-	strncpy(t[i].filename, filename, sizeof(t[i].filename) - 1);
-	t[i].filename[sizeof(t[i].filename) - 1] = '\0';
-	strncpy(t[i].ip, serverIP, sizeof(t[i].ip) - 1);
-	t[i].ip[sizeof(t[i].ip) - 1] = '\0';
-	t[i].size = rSize;
-	t[i].status = 1;
-	(*t_cnt_ptr)++;
-}
 
 static volatile sig_atomic_t keep_running = 1;
 
@@ -143,7 +56,7 @@ int main(int argc, char *argv[])
 
 		char buf[BUF_SIZE];
 		ssize_t total = 0, n;
-		while ((n = read(client_fd, buf + total, sizeof(buf) - total - 1)) > 0) {
+		while (((n = read(client_fd, buf + total, sizeof(buf) - total - 1)) > 0)) {
 			total += n;
 			if ((size_t)total >= sizeof(buf) - 1)
 				break;
