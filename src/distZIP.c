@@ -10,8 +10,18 @@
 #include <unistd.h>
 #include <uuid/uuid.h>
 #include <yaml.h>
+#include <pthread.h>
 
 #include "distZIP.h"
+
+typedef struct tq_node {
+	table data;
+	struct tq_node *next;
+} tq_node;			// internal
+
+static tq_node *head = NULL;
+static tq_node *tail = NULL;
+static pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void print_table(table t)
 {
@@ -39,18 +49,53 @@ int compress_file(const char *compressor, const char *file, table *t)
 	return 0;
 }
 
-int comperess_and_send(table *t)
+table *set_table(const table *t)
 {
-	if (t->status != 1)
+	tq_node *new_node = malloc(sizeof(tq_node));
+	memcpy(&new_node->data, t, sizeof(table));
+	new_node->next = NULL;
+	pthread_mutex_lock(&queue_lock);
+	if (!tail) {
+		head = tail = new_node;
+	} else {
+		tail->next = new_node;
+		tail = new_node;
+	}
+	pthread_mutex_unlock(&queue_lock);
+	return &new_node->data;	// valid till dequeud
+}
+
+table *get_table()
+{
+	pthread_mutex_lock(&queue_lock);
+	if (!head) {
+		pthread_mutex_unlock(&queue_lock);
+		return NULL;
+	}
+	tq_node *temp = head;
+	head = head->next;
+	if (!head)
+		tail = NULL;
+	pthread_mutex_unlock(&queue_lock);
+	table *result = malloc(sizeof(table));
+	memcpy(result, &temp->data, sizeof(table));
+	free(temp);
+	return result;		// copy
+}
+
+int comperess_and_send()
+{
+	table *t = get_table();
+	if (!t || t->status != 1)
 		return 0;
+
 	print_table(*t);
+
 	char fout[255];
 	char Ruuid[37];
 	uuid_unparse(t->uuid, Ruuid);
-	sprintf(fout, "%s.gz", Ruuid);
-
+	snprintf(fout, sizeof(fout), "%s.gz", Ruuid);
 	compress_file("gzip", Ruuid, t);
-
 	FILE *dst = fopen(fout, "rb");
 	struct stat st;
 	stat(fout, &st);
@@ -65,34 +110,28 @@ int comperess_and_send(table *t)
 	memcpy(outBuf + header_len, dstBuf, st.st_size);
 	int sockfd = connectToClient(t->ip, 9998);
 	write(sockfd, outBuf, total_len);
-	close(sockfd);
 
+	close(sockfd);
 	free(dstBuf);
 	free(outBuf);
 	remove(fout);
 	t->status = 2;
+	free(t);
 	return 1;
 }
 
-void create_table(table **t_ptr, size_t *t_cnt_ptr, size_t *tmax_ptr, const char *Ruuid, const char *filename, size_t rSize, const char *serverIP)
+void create_table(const char *Ruuid, const char *filename, size_t rSize, const char *serverIP)
 {
-	if (*t_cnt_ptr >= *tmax_ptr) {
-		*tmax_ptr *= 2;
-		*t_ptr = realloc(*t_ptr, *tmax_ptr * sizeof(table));
-	}
-	table *t = *t_ptr;
-	size_t i = *t_cnt_ptr;
-	uuid_parse(Ruuid, t[i].uuid);
-	strncpy(t[i].filename, filename, sizeof(t[i].filename) - 1);
-	t[i].filename[sizeof(t[i].filename) - 1] = '\0';
-	strncpy(t[i].ip, serverIP, sizeof(t[i].ip) - 1);
-	t[i].ip[sizeof(t[i].ip) - 1] = '\0';
-	t[i].size = rSize;
-	t[i].status = 1;
-	(*t_cnt_ptr)++;
+	table t;
+	uuid_parse(Ruuid, t.uuid);
+	strncpy(t.filename, filename, sizeof(t.filename) - 1);
+	t.filename[sizeof(t.filename) - 1] = '\0';
+	strncpy(t.ip, serverIP, sizeof(t.ip) - 1);
+	t.ip[sizeof(t.ip) - 1] = '\0';
+	t.size = rSize;
+	t.status = 1;
+	set_table(&t);
 }
-
-
 
 char *configParse(const char *key_to_find, char *exc)
 {
@@ -107,7 +146,6 @@ char *configParse(const char *key_to_find, char *exc)
 			strncat(path, "server.yml", sizeof(path) - strlen(path) - 1);
 			fh = fopen(path, "r");
 		}
-
 		if (!fh) {
 			fprintf(stderr, "Configuration file server.yml not found\n");
 			exit(1);

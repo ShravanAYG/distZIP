@@ -16,9 +16,6 @@
 
 #define BUF_SIZE 4096
 
-table *tb;
-size_t t_cnt = 0, tmax = 32;
-
 static volatile sig_atomic_t keep_running = 1;
 
 static void sig_handler(int _)
@@ -29,9 +26,10 @@ static void sig_handler(int _)
 
 int main(int argc, char *argv[])
 {
-	if(argc > 1)
+	if (argc > 1)
 		return 1;
 	signal(SIGINT, sig_handler);
+	size_t t_cnt = 0;
 
 	char *interface = configParse("interface", argv[0]);
 	char *IPAddr = getIPAddr(interface);
@@ -41,9 +39,6 @@ int main(int argc, char *argv[])
 		perror("listenOnIP");
 		goto cleanup;
 	}
-
-	size_t t_cnt = 0, tmax = 32;
-	table *tb = calloc(tmax, sizeof(table));
 
 	while (keep_running) {
 		struct sockaddr_in client_addr;
@@ -71,7 +66,7 @@ int main(int argc, char *argv[])
 		}
 
 		size_t rSize = atoi(recvsize);
-		create_table(&tb, &t_cnt, &tmax, Ruuid, filename, rSize, serverIP);
+		create_table(Ruuid, filename, rSize, serverIP);
 
 		char *newline = strchr(buf, '\n');
 		FILE *out = fopen(Ruuid, "wb");
@@ -100,13 +95,13 @@ int main(int argc, char *argv[])
 		fclose(out);
 		close(client_fd);
 
-		comperess_and_send(&tb[t_cnt - 1]);
+		t_cnt++;
+		comperess_and_send();
 	}
 
 	close(sockfdR);
 
  cleanup:
-	free(tb);
 	free(IPAddr);
 	free(interface);
 	printf("\nProcessed %ld files\n", t_cnt);

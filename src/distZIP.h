@@ -13,6 +13,8 @@ int connectToClient(const char *clientIP, int port);
 int listenOnIP(const char *ip, int port);
 void print_table(table t);
 int compress_file(const char *compressor, const char *file, table *t);
-int comperess_and_send(table *t);
-void create_table(table **t_ptr, size_t *t_cnt_ptr, size_t *tmax_ptr, const char *Ruuid, const char *filename, size_t rSize, const char *serverIP);
+int comperess_and_send();
+void create_table(const char *Ruuid, const char *filename, size_t rSize, const char *serverIP);
+table *set_table(const table *t);
+table *get_table();
 

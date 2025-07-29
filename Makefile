@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -I./src
-LDFLAGS = -lyaml -luuid
+LDFLAGS = -lyaml -luuid -lpthread
 
 SRC_DIR = src
 SRCS_COMMON = $(SRC_DIR)/distZIP.c
