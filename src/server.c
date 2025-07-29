@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	size_t sizeR = atoi(recvsize);
-	printf("Received: %s, Ratio: %.2f%%\n", filename, (double)(st.st_size - sizeR) * 100.0 / (double)st.st_size);
+	printf("Received: %s, Ratio: %.2f%%\n", filename, (double)(sizeR) * 100.0 / (double)st.st_size);
 	FILE *out = fopen(filename, "wb");
 	char *file_start = newline + 1;
 	size_t already = total - (file_start - buf);

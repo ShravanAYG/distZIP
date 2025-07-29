@@ -11,10 +11,18 @@
 #include <unistd.h>
 #include <uuid/uuid.h>
 #include <yaml.h>
+#include <pthread.h>
 
 #include "distZIP.h"
 
 #define BUF_SIZE 4096
+
+
+void *compress_thread(void *arg) {
+	(void)arg;
+    comperess_and_send();  // this pulls from the queue and processes
+    return NULL;
+}
 
 static volatile sig_atomic_t keep_running = 1;
 
@@ -96,7 +104,11 @@ int main(int argc, char *argv[])
 		close(client_fd);
 
 		t_cnt++;
-		comperess_and_send();
+		if (tq_is_available()) {
+    pthread_t tid;
+    pthread_create(&tid, NULL, compress_thread, NULL);
+    pthread_detach(tid);
+}
 	}
 
 	close(sockfdR);

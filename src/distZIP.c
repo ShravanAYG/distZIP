@@ -35,6 +35,7 @@ int compress_file(const char *compressor, const char *file, table *t)
 	char cmd[256];
 
 	sprintf(cmd, "%s -n %s", compressor, file);
+	printf("%s\n", cmd);
 
 	FILE *p = popen(cmd, "r");
 	if (!p) {
@@ -83,6 +84,18 @@ table *get_table()
 	return result;		// copy
 }
 
+int tq_is_available() {
+    pthread_mutex_lock(&queue_lock);
+    int count = 0;
+    tq_node *curr = head;
+    while (curr) {
+        count++;
+        curr = curr->next;
+    }
+    pthread_mutex_unlock(&queue_lock);
+    return count;
+}
+
 int comperess_and_send()
 {
 	table *t = get_table();
@@ -103,6 +116,7 @@ int comperess_and_send()
 	fread(dstBuf, 1, st.st_size, dst);
 	fclose(dst);
 	char header[512];
+	printf("Sending: %s to %s, Ratio: %.2f%%\n", t->filename, t->ip, (double)st.st_size * 100.0 / (double)t->size);
 	size_t header_len = snprintf(header, sizeof(header), "%s.gz %s %ld\n", t->filename, Ruuid, st.st_size);
 	size_t total_len = header_len + st.st_size;
 	char *outBuf = malloc(total_len);
@@ -116,6 +130,7 @@ int comperess_and_send()
 	free(outBuf);
 	remove(fout);
 	t->status = 2;
+	printf("Sent %s\n", t->filename);
 	free(t);
 	return 1;
 }

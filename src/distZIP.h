@@ -17,4 +17,5 @@ int comperess_and_send();
 void create_table(const char *Ruuid, const char *filename, size_t rSize, const char *serverIP);
 table *set_table(const table *t);
 table *get_table();
+int tq_is_available();
 
