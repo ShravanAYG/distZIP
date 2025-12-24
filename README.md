@@ -5,6 +5,8 @@ The project is designed to offload and distribute compression work across a netw
 
 
 # BUILDING:
+``` bash
 make
 make install
+```
 make sure you have libzip install
