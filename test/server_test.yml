@@ -1,0 +1,13 @@
+network:
+  interface: lo
+  bind_address: 127.0.0.1
+  subnet: 127.0.0.0/8
+  port: 9090
+
+compression:
+  format: gzip
+  chunk_size_mb: 1
+
+scheduler:
+  max_clients: 4
+  retry_failed_jobs: 1

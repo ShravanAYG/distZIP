@@ -1,0 +1,12 @@
+client:
+  id: client-01
+  listen_address: 10.220.178.157
+  interface: enp4s0f3u1
+  port: 9999
+
+server:
+  address: 10.220.178.1
+  port: 9090
+
+compression:
+  temp_dir: /tmp/distzip

@@ -1,0 +1,12 @@
+client:
+  id: test-client-01
+  listen_address: 127.0.0.1
+  interface: lo
+  port: 9999
+
+server:
+  address: 127.0.0.1
+  port: 9090
+
+compression:
+  temp_dir: /tmp/distzip-test
