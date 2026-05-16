@@ -1,10 +1,3 @@
-/*
- * distZIP Server — Job Coordinator
- *
- * Splits files into chunks, discovers clients, dispatches compression
- * jobs, collects results, reassembles compressed output.
- */
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -29,7 +22,6 @@
 static volatile sig_atomic_t keep_running = 1;
 static void sig_handler(int sig) { (void)sig; keep_running = 0; }
 
-/* ── Client Registry ── */
 static client_info_t  clients[64];
 static int            client_count = 0;
 static pthread_mutex_t client_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -80,7 +72,6 @@ static void set_client_state(int idx, client_state_t state)
     pthread_mutex_unlock(&client_lock);
 }
 
-/* ── Discovery Thread ── */
 typedef struct { server_config_t *cfg; int listen_fd; } discovery_ctx_t;
 
 static void *discovery_thread(void *arg)
@@ -111,7 +102,6 @@ static void *discovery_thread(void *arg)
     return NULL;
 }
 
-/* ── Dispatch a job to client ── */
 static int dispatch_job(job_t *job, int cidx)
 {
     pthread_mutex_lock(&client_lock);
@@ -142,7 +132,6 @@ static int dispatch_job(job_t *job, int cidx)
     return 0;
 }
 
-/* ── Result Collector Thread ── */
 typedef struct {
     int listen_fd; job_t *jobs; int job_count;
     int *completed; pthread_mutex_t *jlock; server_config_t *cfg;
@@ -203,7 +192,6 @@ static void *collector_thread(void *arg)
     return NULL;
 }
 
-/* ── Reassemble compressed output ── */
 static int reassemble(const char *filename, job_t *jobs, int cnt)
 {
     char out[MAX_FILENAME_LEN + 4];
@@ -223,7 +211,6 @@ static int reassemble(const char *filename, job_t *jobs, int cnt)
     return 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════ */
 int main(int argc, char **argv)
 {
     signal(SIGINT, sig_handler);
